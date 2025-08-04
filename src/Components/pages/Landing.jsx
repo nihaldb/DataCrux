@@ -1,36 +1,16 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Header } from './../index';
 
 function Landing() {
 	const navigate = useNavigate();
 	function toDash() {
-		navigate('/dashboard');
+		navigate('login');
 	}
 	return (
 		<div className="min-h-screen bg-gray-900 text-white font-sans">
 			{/* Header */}
-			<header className="flex justify-between items-center px-6 py-4 bg-gray-800 shadow-md">
-				<h1 className="text-2xl font-bold text-teal-400">DataCrux</h1>
-				<nav>
-					<ul className="flex space-x-6 text-sm">
-						<li>
-							<a href="#features" className="hover:text-teal-300">
-								Features
-							</a>
-						</li>
-						<li>
-							<a href="#about" className="hover:text-teal-300">
-								About
-							</a>
-						</li>
-						<li>
-							<a href="#contact" className="hover:text-teal-300">
-								Contact
-							</a>
-						</li>
-					</ul>
-				</nav>
-			</header>
+			<Header />
 
 			{/* Hero Section */}
 			<section className="flex flex-col items-center justify-center text-center px-4 py-20">

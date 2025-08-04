@@ -61,6 +61,7 @@ function Upload() {
 		};
 
 		reader.readAsText(selected);
+		console.log(data);
 	};
 
 	const handleClear = () => {

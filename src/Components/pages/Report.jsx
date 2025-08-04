@@ -1,157 +1,208 @@
-import React, { useContext } from 'react';
-import { DataContext } from '../../Context/DataContext';
-import { useNavigate } from 'react-router-dom';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { useEffect, useState, useRef, useContext } from 'react';
+import { Chart, registerables } from 'chart.js';
+import Papa from 'papaparse';
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { DataContext } from '../../Context/DataContext';
 
-function Report() {
-	const { data, headers } = useContext(DataContext);
-	const navigate = useNavigate();
+Chart.register(...registerables);
 
-	const totalRows = data.length;
-	const totalColumns = headers.length;
-	const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#00C49F'];
+const Report = () => {
+	const { data: contextData, headers: contextHeaders } =
+		useContext(DataContext);
+	const [filters, setFilters] = useState(
+		() => JSON.parse(localStorage.getItem('filters')) || {}
+	);
+	const [search, setSearch] = useState('');
+	const [chartType, setChartType] = useState('pie');
+	const chartRef = useRef(null);
+	const chartInstance = useRef(null);
 
-	const getValueCounts = (key) => {
-		const counts = {};
-		data.forEach((row) => {
-			const value = row[key] ?? 'NULL';
-			counts[value] = (counts[value] || 0) + 1;
+	const rawData = contextData || [];
+	const headers = contextHeaders || [];
+
+	useEffect(() => {
+		localStorage.setItem('filters', JSON.stringify(filters));
+	}, [filters]);
+
+	const filteredData = rawData
+		.filter((row) => {
+			return headers.every((header) => {
+				const filterValue = filters[header];
+				if (!filterValue) return true;
+				return row[header]
+					?.toString()
+					.toLowerCase()
+					.includes(filterValue.toLowerCase());
+			});
+		})
+		.filter((row) =>
+			Object.values(row).some((val) =>
+				val?.toString().toLowerCase().includes(search.toLowerCase())
+			)
+		);
+
+	const clearAllFilters = () => {
+		setFilters({});
+		setSearch('');
+		localStorage.removeItem('filters');
+	};
+
+	const exportCSV = () => {
+		const csv = Papa.unparse(filteredData);
+		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.setAttribute('download', 'report.csv');
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+	};
+
+	const exportPDF = async () => {
+		const input = document.getElementById('report-table');
+		const canvas = await html2canvas(input);
+		const imgData = canvas.toDataURL('image/png');
+		const pdf = new jsPDF();
+		const imgProps = pdf.getImageProperties(imgData);
+		const pdfWidth = pdf.internal.pageSize.getWidth();
+		const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+		pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+		pdf.save('report.pdf');
+	};
+
+	// CHART: Prepare data
+	const numericKey = headers.find((h) =>
+		filteredData.every((row) => !isNaN(Number(row[h])))
+	);
+	const groupingKey = headers.find((h) => h !== numericKey);
+
+	const chartLabels = [...new Set(filteredData.map((row) => row[groupingKey]))];
+	const chartData = chartLabels.map((label) => {
+		return filteredData
+			.filter((row) => row[groupingKey] === label)
+			.reduce((sum, row) => sum + Number(row[numericKey]), 0);
+	});
+
+	useEffect(() => {
+		if (!chartRef.current) return;
+
+		if (chartInstance.current) chartInstance.current.destroy();
+
+		chartInstance.current = new Chart(chartRef.current, {
+			type: chartType,
+			data: {
+				labels: chartLabels,
+				datasets: [
+					{
+						label: numericKey,
+						data: chartData,
+						backgroundColor: [
+							'#36A2EB',
+							'#FF6384',
+							'#FFCE56',
+							'#4BC0C0',
+							'#9966FF',
+						],
+					},
+				],
+			},
+			options: { responsive: true, maintainAspectRatio: false },
 		});
-		return counts;
-	};
-
-	const getNullStats = () => {
-		const nullCounts = {};
-		headers.forEach((header) => {
-			nullCounts[header] = data.filter(
-				(row) =>
-					row[header] === null ||
-					row[header] === '' ||
-					row[header] === undefined
-			).length;
-		});
-		return nullCounts;
-	};
-
-	const handleExportPDF = () => {
-		const doc = new jsPDF();
-		doc.setFontSize(16);
-		doc.text('DataCrux Report Summary', 20, 20);
-		doc.setFontSize(12);
-		doc.text(`Total Rows: ${totalRows}`, 20, 35);
-		doc.text(`Total Columns: ${totalColumns}`, 20, 45);
-		doc.text(`Columns: ${headers.join(', ')}`, 20, 55);
-
-		doc.text('Missing Value Stats:', 20, 70);
-		const nullStats = getNullStats();
-		let y = 80;
-		for (const [key, val] of Object.entries(nullStats)) {
-			doc.text(`${key}: ${val} null values`, 25, y);
-			y += 10;
-		}
-
-		doc.save('DataCrux_Report.pdf');
-	};
-
-	const valueCounts = headers[0] ? getValueCounts(headers[0]) : {};
-
-	const chartData = Object.entries(valueCounts).map(([key, value]) => ({
-		name: key,
-		value,
-	}));
-
-	const nullStats = getNullStats();
+	}, [chartLabels, chartData, chartType, numericKey]);
 
 	return (
-		<div className="min-h-screen bg-gray-100 p-8">
-			<div className="max-w-5xl mx-auto bg-white p-8 rounded shadow">
-				<h1 className="text-2xl font-bold mb-6 text-indigo-600">
-					📊 Data Report
-				</h1>
+		<div className="p-4 space-y-6">
+			<h1 className="text-2xl font-bold">Report Dashboard</h1>
 
-				{data.length === 0 ? (
-					<p className="text-gray-600">
-						No data uploaded. Please go to the upload page first.
-					</p>
-				) : (
-					<>
-						<ul className="mb-6 text-gray-700">
-							<li>
-								<strong>Total Rows:</strong> {totalRows}
-							</li>
-							<li>
-								<strong>Total Columns:</strong> {totalColumns}
-							</li>
-							<li>
-								<strong>Columns:</strong> {headers.join(', ')}
-							</li>
-						</ul>
+			{/* Filters and Search */}
+			<div className="flex flex-wrap gap-4">
+				{headers.map((header) => (
+					<input
+						key={header}
+						type="text"
+						placeholder={`Filter by ${header}`}
+						value={filters[header] || ''}
+						onChange={(e) =>
+							setFilters({ ...filters, [header]: e.target.value })
+						}
+						className="p-2 border rounded"
+					/>
+				))}
+				<input
+					type="text"
+					placeholder="Search all"
+					value={search}
+					onChange={(e) => setSearch(e.target.value)}
+					className="p-2 border rounded"
+				/>
+				<button
+					onClick={clearAllFilters}
+					className="bg-red-500 text-white px-4 py-2 rounded">
+					Clear All Filters
+				</button>
+			</div>
 
-						<div className="mb-6">
-							<h2 className="text-lg font-semibold mb-2 text-gray-800">
-								Missing Values
-							</h2>
-							<ul className="bg-gray-50 p-4 rounded text-sm">
-								{Object.entries(nullStats).map(([key, val]) => (
-									<li key={key}>
-										{key}: <strong>{val}</strong> null or empty
-									</li>
+			{/* Chart toggle */}
+			<div className="flex items-center gap-2">
+				<label className="font-medium">Chart Type:</label>
+				<select
+					value={chartType}
+					onChange={(e) => setChartType(e.target.value)}
+					className="p-2 border rounded">
+					<option value="pie">Pie</option>
+					<option value="bar">Bar</option>
+					<option value="line">Line</option>
+				</select>
+			</div>
+
+			{/* Chart */}
+			<div className="h-[400px]">
+				<canvas ref={chartRef}></canvas>
+			</div>
+
+			{/* Table */}
+			<div id="report-table" className="overflow-x-auto border">
+				<table className="min-w-full text-left">
+					<thead>
+						<tr>
+							{headers.map((header) => (
+								<th key={header} className="border px-4 py-2 bg-gray-100">
+									{header}
+								</th>
+							))}
+						</tr>
+					</thead>
+					<tbody>
+						{filteredData.map((row, idx) => (
+							<tr key={idx}>
+								{headers.map((header) => (
+									<td key={header} className="border px-4 py-1">
+										{row[header]}
+									</td>
 								))}
-							</ul>
-						</div>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
 
-						{chartData.length > 0 && (
-							<div className="mb-8">
-								<h2 className="text-lg font-semibold mb-2 text-gray-800">
-									Value Distribution for:{' '}
-									<span className="text-indigo-500">{headers[0]}</span>
-								</h2>
-								<ResponsiveContainer width="100%" height={300}>
-									<PieChart>
-										<Pie
-											data={chartData}
-											dataKey="value"
-											nameKey="name"
-											cx="50%"
-											cy="50%"
-											outerRadius={100}
-											label>
-											{chartData.map((entry, index) => (
-												<Cell
-													key={`cell-${index}`}
-													fill={COLORS[index % COLORS.length]}
-												/>
-											))}
-										</Pie>
-										<Tooltip />
-									</PieChart>
-								</ResponsiveContainer>
-							</div>
-						)}
-
-						<div className="flex gap-4 mt-4 flex-wrap">
-							<button
-								onClick={handleExportPDF}
-								className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-								Export PDF
-							</button>
-							<button
-								onClick={() => navigate('/dashboard')}
-								className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-								Go to Dashboard
-							</button>
-							<button
-								onClick={() => navigate('/upload')}
-								className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">
-								Re-upload Data
-							</button>
-						</div>
-					</>
-				)}
+			{/* Export Buttons */}
+			<div className="flex gap-4">
+				<button
+					onClick={exportCSV}
+					className="bg-green-600 text-white px-4 py-2 rounded">
+					Export CSV
+				</button>
+				<button
+					onClick={exportPDF}
+					className="bg-blue-600 text-white px-4 py-2 rounded">
+					Export PDF
+				</button>
 			</div>
 		</div>
 	);
-}
+};
 
 export default Report;

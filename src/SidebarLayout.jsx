@@ -22,7 +22,7 @@ const SidebarLayout = () => {
 		{ name: 'Upload', to: '/upload', icon: <FaUpload /> },
 		{ name: 'Dashboard', to: '/dashboard', icon: <FaChartBar /> },
 		{ name: 'Report', to: '/report', icon: <FaFileAlt /> },
-		{ name: 'Settings', to: '/setting', icon: <FaCog /> },
+		// { name: 'Settings', to: '/setting', icon: <FaCog /> },
 	];
 
 	return (

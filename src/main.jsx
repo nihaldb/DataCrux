@@ -7,31 +7,35 @@ import {
 	Route,
 	RouterProvider,
 } from 'react-router-dom';
-import { DataProvider } from './Context/DataContext.jsx';
-
-import App from './App.jsx';
 import {
 	Dashboard,
 	Landing,
 	Report,
 	Upload,
 	Settings,
+	Login,
+	Registration,
+	About,
+	Contact,
 } from './Components/index.js';
 import SidebarLayout from './SidebarLayout.jsx';
-import {
-	SettingsContext,
-	SettingsProvider,
-} from './Context/SettingsContext.jsx';
+
+import { DataProvider, SettingsProvider, UserProvider } from './Context';
 
 const router = createBrowserRouter(
 	createRoutesFromElements(
 		<>
 			<Route path="" element={<Landing />} />
+			<Route path="login" element={<Login />} />
+			<Route path="register" element={<Registration />} />
+			<Route path="contact" element={<Contact />} />
+			<Route path="about" element={<About />} />
+
 			<Route element={<SidebarLayout />}>
 				<Route path="/dashboard" element={<Dashboard />} />
 				<Route path="/upload" element={<Upload />} />
 				<Route path="/report" element={<Report />} />
-				<Route path="/setting" element={<Settings />} />
+				{/* <Route path="/setting" element={<Settings />} /> */}
 			</Route>
 		</>
 	)
@@ -40,7 +44,9 @@ createRoot(document.getElementById('root')).render(
 	<StrictMode>
 		<SettingsProvider>
 			<DataProvider>
-				<RouterProvider router={router} />
+				<UserProvider>
+					<RouterProvider router={router} />
+				</UserProvider>
 			</DataProvider>
 		</SettingsProvider>
 	</StrictMode>

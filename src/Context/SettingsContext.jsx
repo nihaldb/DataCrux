@@ -1,10 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 
 export const SettingsContext = createContext();
-useEffect(() => {
-	localStorage.setItem('theme', theme);
-	document.documentElement.classList.toggle('dark', theme === 'dark');
-}, [theme]);
 
 export const SettingsProvider = ({ children }) => {
 	const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
