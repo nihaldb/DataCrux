@@ -7,41 +7,36 @@ import {
 	FaFileAlt,
 	FaBars,
 	FaTimes,
-	FaCog,
 } from 'react-icons/fa';
 
 const SidebarLayout = () => {
-	const [sidebarOpen, setSidebarOpen] = useState(true);
+	const [sidebarOpen, setSidebarOpen] = useState(false);
 
-	const toggleSidebar = () => {
-		setSidebarOpen(!sidebarOpen);
-	};
+	const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
 	const navLinks = [
 		{ name: 'Home', to: '/', icon: <FaHome /> },
 		{ name: 'Upload', to: '/upload', icon: <FaUpload /> },
 		{ name: 'Dashboard', to: '/dashboard', icon: <FaChartBar /> },
 		{ name: 'Report', to: '/report', icon: <FaFileAlt /> },
-		// { name: 'Settings', to: '/setting', icon: <FaCog /> },
 	];
 
 	return (
 		<div className="min-h-screen flex flex-col sm:flex-row">
-			{/* Toggle Button */}
-			<button
-				onClick={toggleSidebar}
-				className="sm:hidden p-4 text-indigo-700 bg-gray-100 shadow-md z-10 flex items-center gap-2">
-				{sidebarOpen ? <FaTimes /> : <FaBars />}
-				Menu
-			</button>
+			{/* Top Navbar for Mobile */}
+			<div className="sm:hidden flex justify-between items-center bg-gray-900 text-white p-4">
+				<h1 className="text-xl font-bold text-teal-400">DataCrux</h1>
+				<button onClick={toggleSidebar} className="text-white">
+					{sidebarOpen ? <FaTimes /> : <FaBars />}
+				</button>
+			</div>
 
-			{/* Sidebar */}
+			{/* Sidebar Vertical -> Big Screen Horizontal -> Mobile screen */}
 			<aside
-				className={`bg-gray-900 text-white sm:w-64 w-full sm:block ${
+				className={`bg-gray-900 text-white w-full sm:w-64 sm:block ${
 					sidebarOpen ? 'block' : 'hidden'
-				} sm:relative absolute z-20 sm:z-0`}>
-				<div className="p-6 space-y-6 h-full">
-					<h1 className="text-2xl text-teal-400 font-bold"> DataCrux</h1>
+				} sm:relative absolute z-20`}>
+				<div className="p-6 space-y-6">
 					<nav className="flex flex-col space-y-4">
 						{navLinks.map((link) => (
 							<NavLink
@@ -52,7 +47,8 @@ const SidebarLayout = () => {
 									`flex items-center gap-2 px-2 py-1 rounded hover:bg-indigo-600 ${
 										isActive ? 'bg-indigo-600 font-semibold' : ''
 									}`
-								}>
+								}
+								onClick={() => setSidebarOpen(false)}>
 								{link.icon}
 								{link.name}
 							</NavLink>

@@ -7,7 +7,6 @@ import autoTable from 'jspdf-autotable';
 import { DataContext } from '../../Context/DataContext';
 
 Chart.register(...registerables);
-
 const Report = () => {
 	const { data: contextData, headers: contextHeaders } =
 		useContext(DataContext);
