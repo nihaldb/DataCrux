@@ -3,6 +3,7 @@ import { Chart, registerables } from 'chart.js';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import autoTable from 'jspdf-autotable';
 import { DataContext } from '../../Context/DataContext';
 
 Chart.register(...registerables);
@@ -60,16 +61,28 @@ const Report = () => {
 		document.body.removeChild(link);
 	};
 
-	const exportPDF = async () => {
-		const input = document.getElementById('report-table');
-		const canvas = await html2canvas(input);
-		const imgData = canvas.toDataURL('image/png');
-		const pdf = new jsPDF();
-		const imgProps = pdf.getImageProperties(imgData);
-		const pdfWidth = pdf.internal.pageSize.getWidth();
-		const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-		pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-		pdf.save('report.pdf');
+	const exportPDF = () => {
+		const doc = new jsPDF();
+
+		// Prepare table header and body for autoTable
+		const tableHeaders = [headers];
+		const tableRows = filteredData.map((row) =>
+			headers.map((header) => row[header] || '')
+		);
+
+		autoTable(doc, {
+			head: tableHeaders,
+			body: tableRows,
+			startY: 20,
+			theme: 'grid',
+			headStyles: { fillColor: [33, 150, 243] },
+			didDrawPage: () => {
+				doc.setFontSize(16);
+				doc.text('Report Data', 14, 15);
+			},
+		});
+
+		doc.save('report.pdf');
 	};
 
 	// CHART: Prepare data
